@@ -1,4 +1,12 @@
+from splyci.formula import FormulaBlockVertical, FormulaBlockHorizontal
+from splyci.block import Block
+from pyswip import Prolog
+import collections
+import minizinc
+import pathlib
+import os
 
+PACKAGE_PATH = pathlib.Path(__file__).parent.absolute()
 
 
 class OutputBlock:
@@ -51,8 +59,8 @@ def create_blocks(blocks, matches):
 
     prolog = Prolog()
     print('prolog:-----')
-    with open('tmp/debug_n.pl', 'w') as outfile:
-        with open('tmp/debug.pl', 'r') as infile:
+    with open('/tmp/rules.pl', 'w') as outfile:
+        with open(os.path.join(PACKAGE_PATH, 'rules.pl'), 'r') as infile:
             for line in infile:
                 outfile.write(line)
         for s in pblocks + types + ranges + dependant_types + match_f:
@@ -64,7 +72,7 @@ def create_blocks(blocks, matches):
     #    print(s)
     #    prolog.assertz(s)
     print('-------------')
-    prolog.consult('tmp/debug_n.pl')
+    prolog.consult('/tmp/rules.pl')
 
     for ans in prolog.query('output(Blocks)'):
         oblocks = list(ans['Blocks'])

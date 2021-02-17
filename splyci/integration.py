@@ -1,4 +1,13 @@
-
+from splyci.sheet import sheet_from_file, cells_to_range
+from splyci.match import match
+from splyci.block import _match_lines, _match_sets, split_lines, split_blocks, Block
+from splyci.formula import generalise, FormulaBlockHorizontal, FormulaBlockVertical
+from splyci.csp import create_blocks, csp
+import matplotlib.pyplot as plt
+import matplotlib
+import pandas
+import numpy as np
+from openpyxl.styles.borders import Border, Side
 
 
 def dependent_intersection(original_block, dblocks, di, dj, assignment):
@@ -179,7 +188,3 @@ def draw_blocks(blocks, filename):
     plt.ylim(max_height + 1, 0)
     plt.show()
     plt.savefig(filename)
-
-
-# TODO: Breaks if in different place
-

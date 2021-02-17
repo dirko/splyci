@@ -2,25 +2,10 @@
 Extract constraints from a spreadsheet file.
 """
 
-import matplotlib.pyplot as plt
-import matplotlib.patches
-import collections
-from pyswip import Prolog, Functor, Atom
 import openpyxl
 import openpyxl.utils
 import openpyxl.formula
-from openpyxl.worksheet.cell_range import CellRange
-from openpyxl.styles.borders import Border, Side
-import re
-import numpy as np
-from textwrap import dedent
-import sys
-import uuid
-import datetime
 import pandas
-import minizinc
-import itertools
-import time
 
 
 def cells_to_range(cells):

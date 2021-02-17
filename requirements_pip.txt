@@ -1,3 +1,5 @@
-wxpython
-openpyxl
-pyswip
+openpyxl==3.0.3
+pyswip==0.2.10
+pandas==0.25.1
+minizinc==0.2.3
+matplotlib==3.1.1

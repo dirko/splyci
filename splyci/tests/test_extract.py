@@ -1,10 +1,15 @@
-from constraint_integration.extract import *
-from constraint_integration.extract import _parse_indices
+from splyci.sheet import cells_to_range, Cell, Sheet, get_indices, Formula, extract_types
+from splyci.match import similarity, match
+from splyci.integration import sheet_from_file, get_index_locations, extract
+from splyci.block import split_blocks
+from splyci.csp import _parse_indices
+from splyci.formula import FormulaBlockHorizontal, FormulaBlockVertical, generalise
+from splyci.csp import create_blocks, csp
 from unittest import TestCase
-import unittest
+import openpyxl
 
 
-class TestExtract(TestCase):
+class TestCellsToRange(TestCase):
     def test_cells_to_range(self):
         cells = [(1, 2), (1, 3), (1, 4)]
         r = cells_to_range(cells)
@@ -51,6 +56,8 @@ class TestExtract(TestCase):
         r = cells_to_range(cells)
         self.assertEqual(r, 'C6:E6,G6')
 
+
+class TestMatch(TestCase):
     def test_similarity(self):
         s1 = [
             Cell('a', None, None, None, None),
@@ -115,6 +122,8 @@ class TestExtract(TestCase):
                            ('j_1_00_005', 'j_0_00_002')])
         self.assertEqual(sorted(matches), expected)
 
+
+class TestExtract(TestCase):
     def test_get_indices(self):
         book = openpyxl.load_workbook('data/schools.xlsx')
         sheet = book.worksheets[0]
@@ -253,6 +262,8 @@ class TestExtract(TestCase):
         types = extract_types(cell)
         self.assertEqual(types, {'theme_3', 'color_3_0_3999755851924192'})
 
+
+class TestBlocks(TestCase):
     def test_split_blocks(self):
         im = {
             (1, 1): ('c1', 'r1'),
@@ -326,6 +337,8 @@ class TestExtract(TestCase):
         print(sheet_blocks)
         self.assertEqual(len(sheet_blocks), 3)
 
+
+class TestFormula(TestCase):
     def test_generalise(self):
         sheet = sheet_from_file('data/schools.xlsx', 0, 0)
         index_locations = get_index_locations([sheet])
@@ -338,6 +351,8 @@ class TestExtract(TestCase):
         self.assertEqual(gblocks[-1].dependant_types, {'color_3_0_3999755851924192', 'color_3_0_5999938962981048'})
         self.assertIsInstance(gblocks[-2], FormulaBlockVertical)
 
+
+class TestCsp(TestCase):
     def test_create_blocks(self):
         sheet = sheet_from_file('data/schools.xlsx', 0, 0)
         index_locations = get_index_locations([sheet])
@@ -381,77 +396,54 @@ class TestEndToEnd(TestCase):
         self.assertEqual(df.iloc[1, 1], 'SchoolID')
 
     def test_extract(self):
-        extract([('data/schools.xlsx', 0), ('data/schools.xlsx', 1)], fileout=None)
+        extract([('test_data.xlsx', 0), ('test_data.xlsx', 1)], fileout=None)
 
     def test_cut(self):
-        df = extract([('data/schools.xlsx', 6)], fileout=None)
+        df = extract([('test_data.xlsx', 6)], fileout=None)
         self.assertEqual(df.iloc[2, 0], 'a')
 
     def test_heading(self):
-        df = extract([('data/schools.xlsx', 6), ('data/schools.xlsx', 7)], fileout=None)
+        df = extract([('test_data.xlsx', 6), ('test_data.xlsx', 7)], fileout=None)
         self.assertEqual(df.iloc[2, 0], 'a')
         self.assertEqual(df.iloc[4, 1], 4)
 
     def test_extract_small_one(self):
-        extract([('data/schools.xlsx', 3)], fileout=None)
+        extract([('test_data.xlsx', 3)], fileout=None)
 
     def test_extract_small(self):
-        extract([('data/schools.xlsx', 3), ('data/schools.xlsx', 4)], fileout=None)
+        extract([('test_data.xlsx', 3), ('test_data.xlsx', 4)], fileout=None)
 
     def test_extract_lines_matches(self):
-        extract([('data/schools.xlsx', 8), ('data/schools.xlsx', 9)], fileout=None)
+        extract([('test_data.xlsx', 8), ('test_data.xlsx', 9)], fileout=None)
 
     def test_side_formula(self):
-        df = extract([('data/schools.xlsx', 10)], fileout=None)
+        df = extract([('test_data.xlsx', 10)], fileout=None)
         self.assertEqual(df.iloc[1, 3], '=C2*10')
 
     def test_multi_block_dep(self):
-        df = extract([('data/schools.xlsx', 11)], fileout=None)
+        df = extract([('test_data.xlsx', 11)], fileout=None)
         self.assertEqual(df.iloc[1, 2], '=A2+B2')
 
     def test_multi_block_dep_merge(self):
-        df = extract([('data/schools.xlsx', 11), ('data/schools.xlsx', 13)], fileout=None)
+        df = extract([('test_data.xlsx', 11), ('test_data.xlsx', 13)], fileout=None)
         self.assertEqual(df.iloc[3, 2], '=A4+B4')
 
     def test_split_range(self):
-        df = extract([('data/schools.xlsx', 12)], fileout=None)
+        df = extract([('test_data.xlsx', 12)], fileout=None)
         self.assertEqual(df.iloc[1, 2], '=A2+B2')
 
     def test_depends_multiple_formulas(self):
-        df = extract([('data/schools.xlsx', 15)], fileout=None)
+        df = extract([('test_data.xlsx', 15)], fileout=None)
         self.assertEqual(df.iloc[1, 3], '=C2+B2')
 
     def test_merge_dependent_formulas(self):
-        df = extract([('data/schools.xlsx', 13), ('data/schools.xlsx', 14)], fileout=None)
-        self.assertEqual(df.iloc[1, 3], '=C2*10')
-
-    @unittest.skip('not implemented')
-    def test_empty_cells_between_formulas(self):
-        df = extract([('data/schools.xlsx', 16), ('data/schools.xlsx', 17)], fileout=None)
+        df = extract([('test_data.xlsx', 13), ('test_data.xlsx', 14)], fileout=None)
         self.assertEqual(df.iloc[1, 3], '=C2*10')
 
     def test_match_best_only(self):
-        df = extract([('data/schools.xlsx', 18), ('data/schools.xlsx', 19)], fileout=None)
+        df = extract([('test_data.xlsx', 18), ('test_data.xlsx', 19)], fileout=None)
         self.assertEqual(df.iloc[4, 3], 5)
 
     def test_match_hierarchical_headers(self):
-        df = extract([('data/schools.xlsx', 20), ('data/schools.xlsx', 21)], fileout=None)
+        df = extract([('test_data.xlsx', 20), ('test_data.xlsx', 21)], fileout=None)
         self.assertEqual(df.iloc[3, 3], 7)
-
-    def test_long_blocks(self):
-        df = extract([('../data/synthetic_fuse_formulae//0cabd3ec-3f9c-4130-96ec-2caef4ed56ab_01.xlsx', 3)], fileout=None)
-        self.assertEqual(df.iloc[1, 2], 15000)
-
-    def test_long_blocks_mult(self):
-        df = extract([
-            ('../data/synthetic_fuse_formulae//0cabd3ec-3f9c-4130-96ec-2caef4ed56ab_01.xlsx', 2),
-            #('../data/synthetic_fuse_formulae//0cabd3ec-3f9c-4130-96ec-2caef4ed56ab_01.xlsx', 3),
-        ], fileout=None)
-        self.assertEqual(df.iloc[1, 2], 15000)
-
-    def test_match_spurious(self):
-        df = extract([
-            ('../data/synthetic_fuse/1e5df0a7-6161-48e1-a209-6c2ad88030cc_01.xlsx', 3),
-            ('../data/synthetic_fuse/1e5df0a7-6161-48e1-a209-6c2ad88030cc_01.xlsx', 4),
-        ], fileout=None)
-        self.assertEqual(df.iloc[1, 2], 15000)
