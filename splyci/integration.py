@@ -161,7 +161,7 @@ def extract(filesin, fileout=None):
 
 
 def copy_prolog_file(dir):
-    with open('tmp/debug_n.pl', 'r') as fi:
+    with open('/tmp/rules.pl', 'r') as fi:
         with open(dir + '/blocks.pl', 'w') as fo:
             fo.write(fi.read())
 

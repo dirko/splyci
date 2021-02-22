@@ -392,7 +392,7 @@ class TestCsp(TestCase):
 
 class TestEndToEnd(TestCase):
     def test_extract_single(self):
-        df = extract([('data/schools.xlsx', 0)], fileout=None)
+        df = extract([('test_data.xlsx', 0)], fileout=None)
         self.assertEqual(df.iloc[1, 1], 'SchoolID')
 
     def test_extract(self):
