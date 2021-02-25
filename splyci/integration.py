@@ -49,7 +49,7 @@ def fill_blocks(blocks, output_blocks, assignment):
                 x[assignment[x1] + di - min_x][assignment[y1] + dj - min_y] = cell.v
                 new_cell = ws.cell(row=assignment[y1] + dj - min_y + 1, column=assignment[x1] + di - min_x + 1, value=cell.v)
                 new_cell.border = _new_border(di, dj, width, height)
-        else: # isinstance(original_block, FormulaBlockVertical):
+        else:  # isinstance(original_block, FormulaBlockVertical):
             # Fill in formulas
             for i in range(assignment[x1], assignment[x2] + 1):
                 for j in range(assignment[y1], assignment[y2] + 1):

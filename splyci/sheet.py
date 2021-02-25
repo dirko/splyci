@@ -56,9 +56,6 @@ def cells_to_range(cells):
     return ','.join(r)
 
 
-
-
-
 def get_indices(sheet, sheet_nr):
     edge_map = {}
 

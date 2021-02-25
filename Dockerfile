@@ -76,18 +76,17 @@ RUN apt-get update && apt-get install -y wget
 # Taken from https://github.com/pantonante/notebook-constraint-programming/blob/master/docker/Dockerfile
 # Retrieve MiniZinc IDE distribution
 #  (Replace ADD with wget so the download is cached by docker)
-RUN wget -O /minizinc.tgz https://github.com/MiniZinc/MiniZincIDE/releases/download/2.2.3/MiniZincIDE-2.2.3-bundle-linux-x86_64.tgz
+RUN wget -O /minizinc.tgz https://github.com/MiniZinc/MiniZincIDE/releases/download/2.4.3/MiniZincIDE-2.4.3-bundle-linux-x86_64.tgz
 
 # Unpack compressed MiniZinc archive and renamed folder
 RUN tar -zxf /minizinc.tgz && \
-    mv /MiniZincIDE-2.2.3-bundle-linux /minizinc
+    mv /MiniZincIDE-2.4.3-bundle-linux-x86_64 /minizinc
 
 # Add MiniZinc's binary path to PATH
 ENV PATH="/minizinc:/minizinc/bin:${PATH}"
 
 # Add MiniZinc's library path to LD_LIBRARY_PATH
 ENV LD_LIBRARY_PATH="/minizinc/lib:${LD_LIBRARY_PATH}"
-
 
 # Copy SpLyCI
 RUN mkdir /src

@@ -66,6 +66,7 @@ def _get_block_dependencies(blocks, formula_blocks):
                 dependencies[block] = cdeps
     return dependencies
 
+
 def _get_block_constraints(dependencies):
     width_constraints = {}
     height_constraints = {}
@@ -97,6 +98,7 @@ def _get_block_constraints(dependencies):
                     heightc.add((dblock, relative))
                     height_constraints[block, range_name] = heightc
     return width_constraints, height_constraints
+
 
 def _get_formula_templates(formula_blocks):
     formula_templates = {}

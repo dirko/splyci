@@ -3,6 +3,7 @@ import time
 from splyci.integration import extract
 
 
+# TODO: Add usage instructions
 if __name__ == '__main__':
     fileout = sys.argv[1]
     files = [(fn.split(':')[0], int(fn.split(':')[1])) for fn in sys.argv[2:]]
