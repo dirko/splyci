@@ -1,17 +1,31 @@
-FROM python:3.6
-MAINTAINER Dirko Coetsee <dpcoetsee@gmail.com>
-
+#FROM python:3.9-slim
+FROM python:3.7-bullseye
+LABEL maintainer="Dirko Coetsee <dpcoetsee@gmail.com>"
+#ENV http_proxy=deb.debian.org/debian
 # Install swipl:
 # The following steps taken from https://github.com/SWI-Prolog/docker-swipl/blob/master/8.2.0/stretch/Dockerfile
 #  (Removed libspatialindex4v5 install and libmariadbclient18)
-RUN apt-get update && \
+#RUN apt-get update && \
+#sed -i 's|deb.debian.org/debian|ftp.debian.org/debian|g' /etc/apt/sources.list && \
+#RUN for f in /etc/apt/sources.list.d/*.list; do \
+#      sed -i 's|deb.debian.org/debian|ftp.debian.org/debian|g' "$f"; \
+#    done && \
+RUN rm -f /etc/apt/sources.list.d/* && \
+    printf "\
+deb https://deb.debian.org/debian           bookworm         main\n\
+deb https://deb.debian.org/debian           bookworm-updates main\n\
+deb https://security.debian.org             bookworm-security main\n" \
+    > /etc/apt/sources.list
+RUN apt-get update -o Acquire::Retries=3 && \
     apt-get install -y --no-install-recommends \
     libtcmalloc-minimal4 \
     libarchive13 \
     libyaml-dev \
     libgmp10 \
-    libossp-uuid16 \
-    libssl1.1 \
+    #libossp-uuid16 \
+    #libssl1.1 \
+    libuuid1              \
+    libssl3               \
     ca-certificates \
     libdb5.3 \
     libpcre3 \
@@ -25,7 +39,7 @@ RUN apt-get update && \
     libraptor2-0 && \
     dpkgArch="$(dpkg --print-architecture)" && \
     rm -rf /var/lib/apt/lists/*
-ENV LANG C.UTF-8
+ENV LANG=C.UTF-8
 RUN set -eux; \
     SWIPL_VER=8.2.0; \
     SWIPL_CHECKSUM=d8c9f3adb9cd997a5fed7b5f5dbfe971d2defda969b9066ada158e4202c09c3c; \
@@ -96,6 +110,6 @@ RUN pip install -r requirements_pip.txt
 COPY requirements_dev.txt .
 RUN pip install -r requirements_dev.txt
 COPY . .
-ENV PYTHONPATH "${PYTHONPATH}:/src"
+ENV PYTHONPATH="${PYTHONPATH}:/src"
 
 

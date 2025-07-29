@@ -1,3 +1,22 @@
+:- dynamic data_block/7.
+:- dynamic h_formula_block/6.
+:- dynamic v_formula_block/6.
+:- dynamic match/2.
+:- dynamic col/1.
+:- dynamic row/1.
+:- dynamic block/8.
+:- dynamic yindex/2.
+:- dynamic xindex/2.
+:- dynamic new_xindex/3.
+:- dynamic new_yindex/3.
+:- dynamic output/1.
+:- dynamic type/2.
+:- dynamic depends/2.
+:- dynamic raw_type/2.
+:- dynamic raw_depends/2.
+:- dynamic range/3.
+
+
 h_formula_block(t, 0, 0, 0, 0, 0) :- fail.
 v_formula_block(t, 0, 0, 0, 0, 0) :- fail.
 match(0,0) :- fail.
@@ -29,9 +48,18 @@ new_yindex(Old, Relative, yindex(Relative, Old)) :- dif(Relative, -).
 :- table block/8.
 block(Id, X1o, Y1o, X2o, Y2o, W, H, dep(none,none,none)) :- data_block(Id, X1, Y1, X2, Y2, W, H), map(X1,X1o), map(Y1,Y1o), map(X2,X2o), map(Y2,Y2o).
 block(Id, X1oo, Y1o, X2oo, Y2o, W, H, dep(D,RangeName,DD)) :-
-                        h_formula_block(Id, Te, Y1, Y2, H, RelativePosition), range(Id, R, RangeName), depends(R, T), type(D, T), D\=Id,
-                        block(D, X1, _, X2, _, W, _, DD), map(X1, X1o), map(Y1, Y1o), map( X2, X2o), map(Y2, Y2o),
-                        new_xindex(X1o, RelativePosition, X1oo), new_xindex(X2o, RelativePosition, X2oo).
+    h_formula_block(Id, Te, Y1, Y2, H, RelativePosition),
+    range(Id, R, RangeName),
+    depends(R, T),
+    type(D, T),
+    D\=Id,
+    block(D, X1, _, X2, _, W, _, DD),
+    map(X1, X1o),
+    map(Y1, Y1o),
+    map( X2, X2o),
+    map(Y2, Y2o),
+    new_xindex(X1o, RelativePosition, X1oo),
+    new_xindex(X2o, RelativePosition, X2oo).
 block(Id, X1o, Y1oo, X2o, Y2oo, W, H, dep(D,RangeName, DD)) :-
                         v_formula_block(Id, Te, X1, X2, W, RelativePosition), range(Id, R, RangeName), depends(R, T), type(D, T), D\=Id,
                         block(D, _, Y1, _, Y2, _, H, DD), map(X1, X1o), map(Y1, Y1o), map( X2, X2o), map(Y2, Y2o),

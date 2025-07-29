@@ -1,10 +1,11 @@
+import uuid
 from splyci.formula import FormulaBlockVertical, FormulaBlockHorizontal
 from splyci.block import Block
-from pyswip import Prolog
 import collections
 import minizinc
 import pathlib
 import os
+from multiprocessing import Queue, Process
 
 PACKAGE_PATH = pathlib.Path(__file__).parent.absolute()
 
@@ -24,6 +25,21 @@ def unpack_dependency_trace(deps):
         bid, range_name, deps = deps.args[0].value, deps.args[1].value, deps.args[2]
         trace.append((bid, range_name))
     return trace
+
+
+# Run prolog in a separate process so tests don't interfere
+def prolog_worker(query_str: str, result_queue: Queue, rules_file: str = None):
+    # each worker imports and initializes its own Prolog engine
+    from pyswip import Prolog
+    pl = Prolog()
+
+    # (re)load your rules if needed
+    if rules_file:
+        pl.consult(rules_file)
+
+    # run the query and collect results
+    results = list(pl.query(query_str, normalize=False))
+    result_queue.put(results)
 
 
 def create_blocks(blocks, matches):
@@ -57,9 +73,9 @@ def create_blocks(blocks, matches):
         for type in block.types:
             types.append(f'raw_type({block_id}, {type})')
 
-    prolog = Prolog()
     print('prolog:-----')
-    with open('/tmp/rules.pl', 'w') as outfile:
+    random_tmp_filename = f'/tmp/rules_{uuid.uuid4().hex}.pl'
+    with open(random_tmp_filename, 'w') as outfile:
         with open(os.path.join(PACKAGE_PATH, 'rules.pl'), 'r') as infile:
             for line in infile:
                 outfile.write(line)
@@ -67,21 +83,69 @@ def create_blocks(blocks, matches):
             sout = s + '.'
             outfile.write(sout + '\n')
             print(sout)
+    q = Queue()
+    p = Process(
+        target=prolog_worker,
+        args=("output(Blocks)", q, random_tmp_filename)
+    )
+    p.start()
+    answers = q.get()  # blocks until prolog_worker puts something
+    p.join()  # wait for the process to exit
+    first_ans = answers[0]
 
-    #for s in pblocks + types + dependant_types + match_f:
-    #    print(s)
-    #    prolog.assertz(s)
     print('-------------')
-    prolog.consult('/tmp/rules.pl')
+    #ans_generator = prolog.query('output(Blocks)', normalize=False)
+    #first_ans = next(ans_generator)
+    #ans_generator.close()
+    #unload = prolog.query(f"unload_file('{random_tmp_filename}')")  # Clean up the temporary file
+    #print('unload')
+    #print(list(unload))
+    #unload.close()
+    #retract = prolog.query("""forall( current_predicate(Name/Arity), ( functor(Head, Name, Arity), retractall(Head) ) ) """)
+    #retract.close()
+    #retract = prolog.query("""retractall(block(_,_,_,_,_))""")
+    #retract.close()
+    #retract = prolog.query("""retractall(data_block(_,_,_,_,_,_,_))""")
+    #print('retractall')
+    #print(list(retract))
+    #retract.close()
+    #datablocks = prolog.query("""data_block(Id, X1, Y1, X2, Y2, W, H)""")
+    #print('datablocks')
+    #print(list(datablocks))
+    #datablocks.close()
+    #abolish = prolog.query("""forall( predicate_property(Name/Arity, dynamic), abolish(Name/Arity) ) """)
+    #abolish.close()
+    #from time import sleep
+    #sleep(0.1)
 
-    for ans in prolog.query('output(Blocks)'):
-        oblocks = list(ans['Blocks'])
+    # Should be only one variable
+    blocks = first_ans[0]
+    # Now we have Functor(=, Blocks, <..>), so need to extract arg 2
+    oblocks = blocks.args[1]
     print('outputb', oblocks)
+    # block(Ids, X1, Y1, X2, Y2, W, H, S)
+    blocks = []
+    for block_functor in oblocks:
+        arg_ids, arg_x1, arg_y1, arg_x2, arg_y2, arg_w, arg_h, arg_s = block_functor.args
+        bid = [orb.value for orb in arg_ids]
+        x1 = arg_x1.value
+        y1 = arg_y1.value
+        x2 = arg_x2.value
+        y2 = arg_y2.value
+        width = arg_w  # Already an int
+        height = arg_h  # Already an int
+        original = [block_lookup[orb.value] for orb in arg_ids]
+        dependencies = [
+            (
+                debb.args[0].value,  # block id
+                debb.args[1].value,  # range name
+                unpack_dependency_trace(debb.args[2])  # dependency trace
+            )
+            for debb in arg_s
+        ]
+        new_ouput_block = OutputBlock(bid, x1, y1, x2, y2, width, height, original, dependencies)
+        blocks.append(new_ouput_block)
 
-    blocks = [OutputBlock([orb.value for orb in b.args[0]], b.args[1].value, b.args[2].value, b.args[3].value,
-                          b.args[4].value, b.args[5], b.args[6], [block_lookup[orb.value] for orb in b.args[0]],
-                          [(debb.args[0].value, debb.args[1].value, unpack_dependency_trace(debb.args[2])) for debb in b.args[7]])
-              for b in oblocks]
     # Convert dependencies list to references to OutputBlocks
     block_name_map = {(bid, tuple([(deps[0], deps[1])] + deps[2])): block for block in blocks for bid in block.id for deps in block.dependencies}
     print('block_name_map', block_name_map)
@@ -168,11 +232,19 @@ def _location_constraints(cols, rows, sheets, match_tuples):
     return left, above
 
 
-def csp(blocks, sheets, matches):
+def csp(blocks, sheets, matches, goal):
     print('numblocks', len(blocks))
     blocks = blocks[:]
     model = minizinc.Model()
-    model.add_string("""
+    goal_size_only = "sum(rowsa) + sum(colsa)"
+    goal_num_constraints = "sum(use_left) + sum(use_above) + sum(use_block) + sum(use_left_equal) + sum(use_above_equal)"
+    goal_compact = f"10*({goal_num_constraints}) - (sum(rowsa) + sum(colsa))"
+    goal = {
+        'size': goal_size_only,
+        'num': goal_num_constraints,
+        'compact': goal_compact
+    }.get(goal, goal_size_only)
+    model.add_string(f"""
     include "globals.mzn";
 
     int: num_blocks;
@@ -239,7 +311,7 @@ def csp(blocks, sheets, matches):
 
     %solve satisfy;
     %solve minimize sum(rowsa) + sum(colsa);
-    solve maximize sum(use_left) + sum(use_above) + sum(use_block) + sum(use_left_equal) + sum(use_above_equal);    
+    solve minimize {goal};
     """)
 
     cols = sorted(list(set(block.x1 for block in blocks).union(set(block.x2 for block in blocks))))

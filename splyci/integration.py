@@ -1,8 +1,8 @@
+from splyci.csp import create_blocks, csp
 from splyci.sheet import sheet_from_file, cells_to_range
 from splyci.match import match
 from splyci.block import _match_lines, _match_sets, split_lines, split_blocks, Block
 from splyci.formula import generalise, FormulaBlockHorizontal, FormulaBlockVertical
-from splyci.csp import create_blocks, csp
 import matplotlib.pyplot as plt
 import matplotlib
 import pandas
@@ -123,7 +123,7 @@ def get_index_locations(sheets):
     return locations
 
 
-def extract(filesin, fileout=None):
+def extract(filesin, fileout=None, goal=False):
     sheets = [sheet_from_file(filein, sheetnr, sheet_counter)
               for sheet_counter, (filein, sheetnr) in enumerate(filesin)]
     index_locations = get_index_locations(sheets)
@@ -138,7 +138,7 @@ def extract(filesin, fileout=None):
         generalised_sheet_blocks = [generalise(blocks) for blocks in sheet_blocks]
         blocks = [block for blocks in generalised_sheet_blocks for block in blocks]
         output_blocks = create_blocks(blocks, match_tuples)
-        assignment = csp(output_blocks, sheets, match_tuples)
+        assignment = csp(output_blocks, sheets, match_tuples, goal=goal)
         wb, df = fill_blocks(blocks, output_blocks, assignment)
         print('done')
         pandas.options.display.width = 0

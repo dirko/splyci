@@ -1,6 +1,7 @@
+from splyci.integration import sheet_from_file, get_index_locations, extract
+import unittest
 from splyci.sheet import cells_to_range, Cell, Sheet, get_indices, Formula, extract_types
 from splyci.match import similarity, match
-from splyci.integration import sheet_from_file, get_index_locations, extract
 from splyci.block import split_blocks
 from splyci.csp import _parse_indices
 from splyci.formula import FormulaBlockHorizontal, FormulaBlockVertical, generalise
@@ -399,7 +400,7 @@ class TestEndToEnd(TestCase):
         extract([('test_data.xlsx', 0), ('test_data.xlsx', 1)], fileout=None)
 
     def test_cut(self):
-        df = extract([('test_data.xlsx', 6)], fileout=None)
+        df = extract([('test_data.xlsx', 6)], fileout=None, goal='compact')
         self.assertEqual(df.iloc[2, 0], 'a')
 
     def test_heading(self):
