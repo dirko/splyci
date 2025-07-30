@@ -236,14 +236,14 @@ def csp(blocks, sheets, matches, goal):
     print('numblocks', len(blocks))
     blocks = blocks[:]
     model = minizinc.Model()
-    goal_size_only = "sum(rowsa) + sum(colsa)"
-    goal_num_constraints = "sum(use_left) + sum(use_above) + sum(use_block) + sum(use_left_equal) + sum(use_above_equal)"
-    goal_compact = f"10*({goal_num_constraints}) - (sum(rowsa) + sum(colsa))"
+    goal_size_only = "-(sum(rowsa) + sum(colsa))"
+    goal_num_constraints = "sum(use_left) + sum(use_above) + 4*sum(use_block) + sum(use_left_equal) + sum(use_above_equal)"
+    goal_compact = f"1000*({goal_num_constraints}) - (sum(rowsa) + sum(colsa))"
     goal = {
         'size': goal_size_only,
         'num': goal_num_constraints,
         'compact': goal_compact
-    }.get(goal, goal_size_only)
+    }.get(goal, goal_compact)
     model.add_string(f"""
     include "globals.mzn";
 
@@ -311,7 +311,7 @@ def csp(blocks, sheets, matches, goal):
 
     %solve satisfy;
     %solve minimize sum(rowsa) + sum(colsa);
-    solve minimize {goal};
+    solve maximize {goal};
     """)
 
     cols = sorted(list(set(block.x1 for block in blocks).union(set(block.x2 for block in blocks))))

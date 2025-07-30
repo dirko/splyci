@@ -38,7 +38,10 @@ def fill_blocks(blocks, output_blocks, assignment):
     for nblock, block in enumerate(output_blocks):
         (ids, x1, y1, x2, y2, width, height, original_blocks, dependent_blocks) = \
             block.id, block.x1, block.y1, block.x2, block.y2, block.width, block.height, block.original, block.dependencies
-        print(nblock, '/', len(output_blocks), '  ', (width, height), original_blocks)
+        print_blocks = [repr(pblock) for pblock in original_blocks]
+        for assignment_k, assignment_v in assignment.items():
+            print_blocks = [pblock.replace(assignment_k, f'{assignment_k}={assignment_v}') for pblock in print_blocks]
+        print(nblock, '/', len(output_blocks), '  ', (width, height), print_blocks)
         # TODO how to disambiguoate?
         original_block = original_blocks[0]
         if isinstance(original_block, Block):

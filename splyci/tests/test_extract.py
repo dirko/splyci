@@ -400,13 +400,13 @@ class TestEndToEnd(TestCase):
         extract([('test_data.xlsx', 0), ('test_data.xlsx', 1)], fileout=None)
 
     def test_cut(self):
-        df = extract([('test_data.xlsx', 6)], fileout=None, goal='compact')
+        df = extract([('test_data.xlsx', 6)], fileout=None, goal='num')
         self.assertEqual(df.iloc[2, 0], 'a')
 
     def test_heading(self):
         df = extract([('test_data.xlsx', 6), ('test_data.xlsx', 7)], fileout=None)
-        self.assertEqual(df.iloc[2, 0], 'a')
-        self.assertEqual(df.iloc[4, 1], 4)
+        self.assertEqual(df.iloc[0, 0], 'a')
+        self.assertEqual(df.iloc[1, 1], 4)
 
     def test_extract_small_one(self):
         extract([('test_data.xlsx', 3)], fileout=None)
@@ -443,8 +443,8 @@ class TestEndToEnd(TestCase):
 
     def test_match_best_only(self):
         df = extract([('test_data.xlsx', 18), ('test_data.xlsx', 19)], fileout=None)
-        self.assertEqual(df.iloc[4, 3], 5)
+        self.assertEqual(df.iloc[1, 3], 'cc')
 
     def test_match_hierarchical_headers(self):
         df = extract([('test_data.xlsx', 20), ('test_data.xlsx', 21)], fileout=None)
-        self.assertEqual(df.iloc[3, 3], 7)
+        self.assertEqual(df.iloc[2, 3], 7)
