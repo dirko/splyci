@@ -1,5 +1,9 @@
 
-class FormulaBlockVertical:
+class FormulaBlock:
+    pass
+
+
+class FormulaBlockVertical(FormulaBlock):
     def __init__(self, template, i1, i2, dependant_types, types, width, dependencies, relative):
         self.template = template
         self.i1 = i1
@@ -18,7 +22,7 @@ class FormulaBlockVertical:
         return hash(('v', self.template, self.i1, self.i2, tuple(self.types), tuple(self.dependant_types), self.relative))
 
 
-class FormulaBlockHorizontal:
+class FormulaBlockHorizontal(FormulaBlock):
     def __init__(self, template, i1, i2, dependant_types, types, height, dependencies, relative):
         self.template = template
         self.i1 = i1

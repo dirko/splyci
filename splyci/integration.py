@@ -1,3 +1,5 @@
+import json
+import collections
 from dataclasses import dataclass
 import datetime
 
@@ -11,7 +13,7 @@ from splyci.csp import create_blocks, csp
 from splyci.sheet import sheet_from_file, cells_to_range
 from splyci.match import match
 from splyci.block import _match_lines, _match_sets, split_lines, split_blocks, Block
-from splyci.formula import generalise, FormulaBlockHorizontal, FormulaBlockVertical
+from splyci.formula import generalise, FormulaBlock, FormulaBlockHorizontal, FormulaBlockVertical
 
 
 def dependent_intersection(original_block, dblocks, di, dj, assignment):
@@ -135,7 +137,9 @@ class IntegrationReport:
     num_sheet_formula_blocks: (int, int)
     num_generalised_formula_blocks: (int, int)
     num_output_blocks: int
-
+    num_used_blocks: int
+    num_used_positional_constraints: int
+    num_total_positional_constraints: int
 
 
 def extract(
@@ -163,9 +167,20 @@ def extract(
     try:
         generalised_sheet_blocks = [generalise(blocks) for blocks in sheet_blocks]
         blocks = [block for blocks in generalised_sheet_blocks for block in blocks]
-        output_blocks = create_blocks(blocks, match_tuples)
-        assignment, prolog_file_name = csp(output_blocks, sheets, match_tuples, goal=goal, time_limit=csp_time_limit, optimisation_level=csp_optimisation_level)
+        output_blocks, prolog_file_name = create_blocks(blocks, match_tuples)
+        ProjectedBlock = collections.namedtuple('ProjectedBlock', 'x1 y1 x2 y2 width height')
+        pblocks = list(set(ProjectedBlock(block.x1, block.y1, block.x2, block.y2, block.width, block.height) for block in blocks))
+        assignment, used_constraints = csp(pblocks, sheets, match_tuples, goal=goal, time_limit=csp_time_limit, optimisation_level=csp_optimisation_level)
         wb, df = fill_blocks(blocks, output_blocks, assignment)
+        integration_report = IntegrationReport(
+            num_sheet_blocks=(len(sb) for sb in sheet_blocks),
+            num_sheet_formula_blocks=(len([b for b in sb if b.type == 'formula']) for sb in sheet_blocks),
+            num_generalised_formula_blocks=(len([b for b in sb if isinstance(b, FormulaBlock)]) for sb in generalised_sheet_blocks),
+            num_output_blocks=len(output_blocks),
+            num_used_blocks=len(b for b, used in used_constraints['blocks'].items() if used),
+            num_used_positional_constraints=sum(len(w for w, used in used_constraints[positional].items() if used) for positional in ['left', 'above', 'left_equal', 'above_equal']),
+            num_total_positional_constraints=sum(len(w for w, used in used_constraints[positional].items()) for positional in ['left', 'above', 'left_equal', 'above_equal'])
+        )
         print('done')
         pandas.options.display.width = 0
         print(df)
@@ -176,6 +191,7 @@ def extract(
     finally:
         #print(df)
         if fileout:
+            save_report(integration_report, fileout + '/report.json')
             for i, blocks in enumerate(sheet_blocks):
                 draw_blocks(blocks, fileout + f'/{i}.svg')
     if fileout:
@@ -183,7 +199,21 @@ def extract(
         #df.to_excel(filen, header=False, index=False)
         wb.save(filen)
         copy_prolog_file(prolog_file_name, fileout)
-    return df
+    return df, integration_report
+
+
+def save_report(report, filename):
+    data = {
+        'num_sheet_blocks': report.num_sheet_blocks,
+        'num_sheet_formula_blocks': report.num_sheet_formula_blocks,
+        'num_generalised_formula_blocks': report.num_generalised_formula_blocks,
+        'num_output_blocks': report.num_output_blocks,
+        'num_used_blocks': report.num_used_blocks,
+        'num_used_positional_constraints': report.num_used_positional_constraints,
+        'num_total_positional_constraints': report.num_total_positional_constraints,
+    }
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=4, sort_keys=True, default=str)
 
 
 def copy_prolog_file(filename, dir):

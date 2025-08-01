@@ -208,9 +208,7 @@ def _location_constraints(cols, rows, sheets, match_tuples):
     return left, above
 
 
-def csp(blocks, sheets, matches, goal, time_limit, optimisation_level):
-    print('numblocks', len(blocks))
-    blocks = blocks[:]
+def csp(pblocks, sheets, matches, goal, time_limit, optimisation_level):
     model = minizinc.Model()
     goal_size_only = "-(sum(rowsa) + sum(colsa))"
     goal_num_constraints = "sum(use_left) + sum(use_above) + 4*sum(use_block) + sum(use_left_equal) + sum(use_above_equal)"
@@ -290,8 +288,8 @@ def csp(blocks, sheets, matches, goal, time_limit, optimisation_level):
     solve maximize {goal};
     """)
 
-    cols = sorted(list(set(block.x1 for block in blocks).union(set(block.x2 for block in blocks))))
-    rows = sorted(list(set(block.y1 for block in blocks).union(set(block.y2 for block in blocks))))
+    cols = sorted(list(set(block.x1 for block in pblocks).union(set(block.x2 for block in pblocks))))
+    rows = sorted(list(set(block.y1 for block in pblocks).union(set(block.y2 for block in pblocks))))
     relative_left, relative_left_equals = _parse_indices(cols, matches)
     relative_above, relative_above_equals = _parse_indices(rows, matches)
     colsi = {col: i+1 for i, col in enumerate(cols)}
@@ -299,15 +297,6 @@ def csp(blocks, sheets, matches, goal, time_limit, optimisation_level):
     left, above = _location_constraints(cols, rows, sheets, matches)
     left = [(l1, l2) for l1, l2 in left if l1 in cols and l2 in cols] + relative_left
     above = [(a1, a2) for a1, a2 in above if a1 in rows and a2 in rows] + relative_above
-    print('blocks', blocks)
-
-    ProjectedBlock = collections.namedtuple('ProjectedBlock', 'x1 y1 x2 y2 width height')
-    pblocks = list(set(ProjectedBlock(block.x1, block.y1, block.x2, block.y2, block.width, block.height) for block in blocks))
-    for b in blocks:
-        print(' ', b)
-    print(len(blocks), len(pblocks))
-    for b in pblocks:
-        print('  ', b)
     print('pblocks', len(pblocks), pblocks)
     print('colsi', colsi)
     print('rowsi', rowsi)
@@ -348,16 +337,13 @@ def csp(blocks, sheets, matches, goal, time_limit, optimisation_level):
     print(result['colsa'])
     assignment = {col: r for col, r in zip(cols, result['colsa'])}
     assignment.update(**{row: r for row, r in zip(rows, result['rowsa'])})
-    used_blocks = {}
-    for block, used in zip(pblocks, result['use_block']):
-        used_blocks[block] = used
-        print(used)
-        if not used:
-            print('Warning not used:', block)
-            for oblock in blocks:
-                if oblock.x1 == block.x1 and oblock.y1 == block.y1 and oblock.x2 == block.x2 and oblock.y2 == block.y2:
-                    print('Original block:', oblock)
+    used_constraints = {}
+    used_constraints['left'] = {l: used for l, used in zip(left, result['use_left'])}
+    used_constraints['above'] = {a: used for a, used in zip(above, result['use_above'])}
+    used_constraints['left_equal'] = {l: used for l, used in zip(relative_left_equals, result['use_left_equal'])}
+    used_constraints['above_equal'] = {a: used for a, used in zip(relative_above_equals, result['use_above_equal'])}
+    used_constraints['blocks'] = {block: used for block, used in zip(pblocks, result['use_block'])}
 
     print('assignment', assignment)
-    return assignment
+    return assignment, used_constraints
 
