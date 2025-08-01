@@ -1,13 +1,17 @@
-from splyci.csp import create_blocks, csp
-from splyci.sheet import sheet_from_file, cells_to_range
-from splyci.match import match
-from splyci.block import _match_lines, _match_sets, split_lines, split_blocks, Block
-from splyci.formula import generalise, FormulaBlockHorizontal, FormulaBlockVertical
+from dataclasses import dataclass
+import datetime
+
 import matplotlib.pyplot as plt
 import matplotlib
 import pandas
 import numpy as np
 from openpyxl.styles.borders import Border, Side
+
+from splyci.csp import create_blocks, csp
+from splyci.sheet import sheet_from_file, cells_to_range
+from splyci.match import match
+from splyci.block import _match_lines, _match_sets, split_lines, split_blocks, Block
+from splyci.formula import generalise, FormulaBlockHorizontal, FormulaBlockVertical
 
 
 def dependent_intersection(original_block, dblocks, di, dj, assignment):
@@ -125,12 +129,31 @@ def get_index_locations(sheets):
             locations[nj] = j
     return locations
 
+@dataclass
+class IntegrationReport:
+    num_sheet_blocks: (int, int)
+    num_sheet_formula_blocks: (int, int)
+    num_generalised_formula_blocks: (int, int)
+    num_output_blocks: int
 
-def extract(filesin, fileout=None, goal=False):
-    sheets = [sheet_from_file(filein, sheetnr, sheet_counter)
-              for sheet_counter, (filein, sheetnr) in enumerate(filesin)]
+
+
+def extract(
+        filesin,
+        fileout=None,
+        goal=False,
+        cut_use_annotations=True,
+        cut_use_border_style=False,
+        match_use_annotations=True,
+        csp_time_limit=datetime.timedelta(seconds=60),
+        csp_optimisation_level=0,
+):
+    sheets = [
+        sheet_from_file(filein, sheetnr, sheet_counter, use_cut_annotations=cut_use_annotations, use_border_style=cut_use_border_style)
+        for sheet_counter, (filein, sheetnr) in enumerate(filesin)
+    ]
     index_locations = get_index_locations(sheets)
-    match_tuples = match(sheets)
+    match_tuples = match(sheets, use_match_annotations=match_use_annotations)
     match_sets = _match_sets(match_tuples)
 
     lines = [line for sheet in sheets for line in split_lines(sheet, match_sets, index_locations)]
@@ -141,7 +164,7 @@ def extract(filesin, fileout=None, goal=False):
         generalised_sheet_blocks = [generalise(blocks) for blocks in sheet_blocks]
         blocks = [block for blocks in generalised_sheet_blocks for block in blocks]
         output_blocks = create_blocks(blocks, match_tuples)
-        assignment = csp(output_blocks, sheets, match_tuples, goal=goal)
+        assignment, prolog_file_name = csp(output_blocks, sheets, match_tuples, goal=goal, time_limit=csp_time_limit, optimisation_level=csp_optimisation_level)
         wb, df = fill_blocks(blocks, output_blocks, assignment)
         print('done')
         pandas.options.display.width = 0
@@ -159,12 +182,12 @@ def extract(filesin, fileout=None, goal=False):
         filen = fileout + '/output.xlsx'
         #df.to_excel(filen, header=False, index=False)
         wb.save(filen)
-        copy_prolog_file(fileout)
+        copy_prolog_file(prolog_file_name, fileout)
     return df
 
 
-def copy_prolog_file(dir):
-    with open('/tmp/rules.pl', 'r') as fi:
+def copy_prolog_file(filename, dir):
+    with open(filename, 'r') as fi:
         with open(dir + '/blocks.pl', 'w') as fo:
             fo.write(fi.read())
 
@@ -189,5 +212,4 @@ def draw_blocks(blocks, filename):
 
     plt.xlim(0, max_width + 1)
     plt.ylim(max_height + 1, 0)
-    plt.show()
     plt.savefig(filename)

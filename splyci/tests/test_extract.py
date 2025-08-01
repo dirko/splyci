@@ -9,6 +9,13 @@ from splyci.csp import create_blocks, csp
 from unittest import TestCase
 import openpyxl
 
+# To get a text coverage report with pytest, run:
+# pytest --cov=splyci --cov-report=term-missing splyci
+
+# Get the current dir to find data files
+TEST_DIR = __file__.rsplit('/', 1)[0] + '/'
+test_data = TEST_DIR + 'test_data.xlsx'
+
 
 class TestCellsToRange(TestCase):
     def test_cells_to_range(self):
@@ -393,58 +400,58 @@ class TestCsp(TestCase):
 
 class TestEndToEnd(TestCase):
     def test_extract_single(self):
-        df = extract([('test_data.xlsx', 0)], fileout=None)
+        df = extract([(test_data, 0)], fileout=None)
         self.assertEqual(df.iloc[1, 1], 'SchoolID')
 
     def test_extract(self):
-        extract([('test_data.xlsx', 0), ('test_data.xlsx', 1)], fileout=None)
+        extract([(test_data, 0), (test_data, 1)], fileout=None)
 
     def test_cut(self):
-        df = extract([('test_data.xlsx', 6)], fileout=None, goal='num')
+        df = extract([(test_data, 6)], fileout=None, goal='num')
         self.assertEqual(df.iloc[2, 0], 'a')
 
     def test_heading(self):
-        df = extract([('test_data.xlsx', 6), ('test_data.xlsx', 7)], fileout=None)
+        df = extract([(test_data, 6), (test_data, 7)], fileout=None)
         self.assertEqual(df.iloc[0, 0], 'a')
         self.assertEqual(df.iloc[1, 1], 4)
 
     def test_extract_small_one(self):
-        extract([('test_data.xlsx', 3)], fileout=None)
+        extract([(test_data, 3)], fileout=None)
 
     def test_extract_small(self):
-        extract([('test_data.xlsx', 3), ('test_data.xlsx', 4)], fileout=None)
+        extract([(test_data, 3), (test_data, 4)], fileout=None)
 
     def test_extract_lines_matches(self):
-        extract([('test_data.xlsx', 8), ('test_data.xlsx', 9)], fileout=None)
+        extract([(test_data, 8), (test_data, 9)], fileout=None)
 
     def test_side_formula(self):
-        df = extract([('test_data.xlsx', 10)], fileout=None)
+        df = extract([(test_data, 10)], fileout=None)
         self.assertEqual(df.iloc[1, 3], '=C2*10')
 
     def test_multi_block_dep(self):
-        df = extract([('test_data.xlsx', 11)], fileout=None)
+        df = extract([(test_data, 11)], fileout=None)
         self.assertEqual(df.iloc[1, 2], '=A2+B2')
 
     def test_multi_block_dep_merge(self):
-        df = extract([('test_data.xlsx', 11), ('test_data.xlsx', 13)], fileout=None)
+        df = extract([(test_data, 11), (test_data, 13)], fileout=None)
         self.assertEqual(df.iloc[3, 2], '=A4+B4')
 
     def test_split_range(self):
-        df = extract([('test_data.xlsx', 12)], fileout=None)
+        df = extract([(test_data, 12)], fileout=None)
         self.assertEqual(df.iloc[1, 2], '=A2+B2')
 
     def test_depends_multiple_formulas(self):
-        df = extract([('test_data.xlsx', 15)], fileout=None)
+        df = extract([(test_data, 15)], fileout=None)
         self.assertEqual(df.iloc[1, 3], '=C2+B2')
 
     def test_merge_dependent_formulas(self):
-        df = extract([('test_data.xlsx', 13), ('test_data.xlsx', 14)], fileout=None)
+        df = extract([(test_data, 13), (test_data, 14)], fileout=None)
         self.assertEqual(df.iloc[1, 3], '=C2*10')
 
     def test_match_best_only(self):
-        df = extract([('test_data.xlsx', 18), ('test_data.xlsx', 19)], fileout=None)
+        df = extract([(test_data, 18), (test_data, 19)], fileout=None)
         self.assertEqual(df.iloc[1, 3], 'cc')
 
     def test_match_hierarchical_headers(self):
-        df = extract([('test_data.xlsx', 20), ('test_data.xlsx', 21)], fileout=None)
+        df = extract([(test_data, 20), (test_data, 21)], fileout=None)
         self.assertEqual(df.iloc[2, 3], 7)

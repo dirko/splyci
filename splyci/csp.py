@@ -94,30 +94,6 @@ def create_blocks(blocks, matches):
     first_ans = answers[0]
 
     print('-------------')
-    #ans_generator = prolog.query('output(Blocks)', normalize=False)
-    #first_ans = next(ans_generator)
-    #ans_generator.close()
-    #unload = prolog.query(f"unload_file('{random_tmp_filename}')")  # Clean up the temporary file
-    #print('unload')
-    #print(list(unload))
-    #unload.close()
-    #retract = prolog.query("""forall( current_predicate(Name/Arity), ( functor(Head, Name, Arity), retractall(Head) ) ) """)
-    #retract.close()
-    #retract = prolog.query("""retractall(block(_,_,_,_,_))""")
-    #retract.close()
-    #retract = prolog.query("""retractall(data_block(_,_,_,_,_,_,_))""")
-    #print('retractall')
-    #print(list(retract))
-    #retract.close()
-    #datablocks = prolog.query("""data_block(Id, X1, Y1, X2, Y2, W, H)""")
-    #print('datablocks')
-    #print(list(datablocks))
-    #datablocks.close()
-    #abolish = prolog.query("""forall( predicate_property(Name/Arity, dynamic), abolish(Name/Arity) ) """)
-    #abolish.close()
-    #from time import sleep
-    #sleep(0.1)
-
     # Should be only one variable
     blocks = first_ans[0]
     # Now we have Functor(=, Blocks, <..>), so need to extract arg 2
@@ -159,7 +135,7 @@ def create_blocks(blocks, matches):
         block.old_dependencies = block.dependencies
         block.dependencies = new_dependencies
     print('blocks! ', blocks)
-    return blocks
+    return blocks, random_tmp_filename
 
 
 def _parse_indices(indices, match_tuples):
@@ -232,7 +208,7 @@ def _location_constraints(cols, rows, sheets, match_tuples):
     return left, above
 
 
-def csp(blocks, sheets, matches, goal):
+def csp(blocks, sheets, matches, goal, time_limit, optimisation_level):
     print('numblocks', len(blocks))
     blocks = blocks[:]
     model = minizinc.Model()
@@ -366,7 +342,7 @@ def csp(blocks, sheets, matches, goal):
         minst[k] = v
     # Solve the instance
     print('CSP')
-    result = minst.solve(all_solutions=False)
+    result = minst.solve(all_solutions=False, time_limit=time_limit, optimisation_level=optimisation_level)
     print('res', result)
     print(result['rowsa'])
     print(result['colsa'])

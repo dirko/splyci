@@ -70,7 +70,6 @@ def _get_block_dependencies(blocks, formula_blocks):
 def _get_block_constraints(dependencies):
     width_constraints = {}
     height_constraints = {}
-    #print('gbc', dependencies)
     for block, cdeps in dependencies.items():
         for range_name, dblocks in cdeps.items():
             for dblock in dblocks:

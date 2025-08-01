@@ -47,12 +47,13 @@ def _top_fill(cells_map):
     return ncells
 
 
-def match(sheets):
+def match(sheets, use_match_annotations=True):
     annotated_matches = {}
-    for sheet_nr, sheet in enumerate(sheets):
-        for ann in sheet.annotations:
-            if ann[0] == 'col_id' or ann[0] == 'row_id':
-                annotated_matches[ann[1], sheet_nr] = ann[2]
+    if use_match_annotations:
+        for sheet_nr, sheet in enumerate(sheets):
+            for ann in sheet.annotations:
+                if ann[0] == 'col_id' or ann[0] == 'row_id':
+                    annotated_matches[ann[1], sheet_nr] = ann[2]
 
     matches = []
     cells = [(cell.i, cell.j, sheet_nr, cell) for sheet_nr, sheet in enumerate(sheets) for cell in sheet.cells]

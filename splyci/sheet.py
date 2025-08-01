@@ -56,33 +56,37 @@ def cells_to_range(cells):
     return ','.join(r)
 
 
-def get_indices(sheet, sheet_nr):
+def get_indices(sheet, sheet_nr, use_border_style, use_cut_annotations):
     edge_map = {}
 
     for row in sheet:
         for cell in row:
-            edge_map[(cell.column, cell.row)] = (
-                # For now ignore this until we have something that works better
-                1 * 0,#(cell.value is None and (cell.border.left.style is not None or cell.border.right.style is not None)),
-                1 * 0#(cell.value is None and (cell.border.top.style is not None or cell.border.bottom.style is not None)),
-            )
+            if use_border_style:
+                edge_map[(cell.column, cell.row)] = (
+                    # For now ignore this until we have something that works better
+                    1 * (cell.value is None and (cell.border.left.style is not None or cell.border.right.style is not None)),
+                    1 * (cell.value is None and (cell.border.top.style is not None or cell.border.bottom.style is not None)),
+                )
+            else:
+                edge_map[(cell.column, cell.row)] = (0, 0)
 
     for row in sheet:
         for cell in row:
             if not cell.comment:
                 continue
             anns = [tuple(ann.split(' ')) for ann in cell.comment.text.split('\n')]
-            for ann in anns:
-                if ann[0] == 'row_cut':
-                    for (i, j) in edge_map.keys():
-                        if j == cell.row and i >= cell.column and i - cell.column <= int(ann[1]):
-                            eme = edge_map[i, j]
-                            edge_map[i, j] = (1, eme[1])
-                if ann[0] == 'col_cut':
-                    for (i, j) in edge_map.keys():
-                        if i == cell.column and j >= cell.row and j - cell.row <= int(ann[1]):
-                            eme = edge_map[i, j]
-                            edge_map[i, j] = (eme[0], 1)
+            if use_cut_annotations:
+                for ann in anns:
+                    if ann[0] == 'row_cut':
+                        for (i, j) in edge_map.keys():
+                            if j == cell.row and i >= cell.column and i - cell.column <= int(ann[1]):
+                                eme = edge_map[i, j]
+                                edge_map[i, j] = (1, eme[1])
+                    if ann[0] == 'col_cut':
+                        for (i, j) in edge_map.keys():
+                            if i == cell.column and j >= cell.row and j - cell.row <= int(ann[1]):
+                                eme = edge_map[i, j]
+                                edge_map[i, j] = (eme[0], 1)
 
     cmap = {}
     for row in sheet:
@@ -150,10 +154,10 @@ def extract_cell_annotation(i, j, text):
     return ans
 
 
-def sheet_from_file(filein, sheetnr, sheet_counter):
+def sheet_from_file(filein, sheetnr, sheet_counter, use_border_style=False, use_cut_annotations=True):
     book = openpyxl.load_workbook(filein)
     sheet = book.worksheets[sheetnr]
-    index_map = get_indices(sheet, sheet_counter)
+    index_map = get_indices(sheet, sheet_counter, use_border_style=use_border_style, use_cut_annotations=use_cut_annotations)
     cells = []
     annotations = []
     for r in sheet:
