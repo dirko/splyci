@@ -46,7 +46,7 @@ class Block:
         # Was previously if all(...), but think it should be any(...) because a block should have no type if
         #  it is completely empty.
         self.types = set.intersection(*[cell.types for cell in cells if cell.v is not None]) if any(c.v is not None for c in cells) else set()
-        print('types', self.types, [cell.types for cell in cells if cell.v is not None], [c.v is not None for c in cells])
+        #print('types', self.types, [cell.types for cell in cells if cell.v is not None], [c.v is not None for c in cells])
         self.block_id = 'b_' + hex(abs(hash(self)))[2:9]
 
     def __repr__(self):

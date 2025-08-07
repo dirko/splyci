@@ -332,7 +332,10 @@ def csp(pblocks, sheets, matches, goal, time_limit, optimisation_level):
     # Solve the instance
     print('CSP')
     result = minst.solve(all_solutions=False, time_limit=time_limit, optimisation_level=optimisation_level)
-    print('res', result)
+    print('res', result, type(result))
+    if result.solution is None:
+        print('No solution found')
+        return None, {'left': {}, 'above': {}, 'left_equal': {}, 'above_equal': {}, 'blocks': {}}
     print(result['rowsa'])
     print(result['colsa'])
     assignment = {col: r for col, r in zip(cols, result['colsa'])}

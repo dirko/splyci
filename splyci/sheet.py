@@ -58,6 +58,7 @@ def cells_to_range(cells):
 
 def get_indices(sheet, sheet_nr, use_border_style, use_cut_annotations):
     edge_map = {}
+    annotations = []
 
     for row in sheet:
         for cell in row:
@@ -77,6 +78,7 @@ def get_indices(sheet, sheet_nr, use_border_style, use_cut_annotations):
             anns = [tuple(ann.split(' ')) for ann in cell.comment.text.split('\n')]
             if use_cut_annotations:
                 for ann in anns:
+                    annotations.extend([ann for ann in anns if ann[0].endswith('cut')])
                     if ann[0] == 'row_cut':
                         for (i, j) in edge_map.keys():
                             if j == cell.row and i >= cell.column and i - cell.column <= int(ann[1]):
@@ -102,7 +104,7 @@ def get_indices(sheet, sheet_nr, use_border_style, use_cut_annotations):
         for cell in row:
             index_map[(cell.column, cell.row)] = (f'i_{sheet_nr}_{cmap[cell.column, cell.row][0]:02}_{cell.column:03}',
                                                   f'j_{sheet_nr}_{cmap[cell.column, cell.row][1]:02}_{cell.row:03}' )
-    return index_map
+    return index_map, annotations
 
 
 class Formula:
@@ -157,7 +159,7 @@ def extract_cell_annotation(i, j, text):
 def sheet_from_file(filein, sheetnr, sheet_counter, use_border_style=False, use_cut_annotations=True):
     book = openpyxl.load_workbook(filein)
     sheet = book.worksheets[sheetnr]
-    index_map = get_indices(sheet, sheet_counter, use_border_style=use_border_style, use_cut_annotations=use_cut_annotations)
+    index_map, cut_annotations = get_indices(sheet, sheet_counter, use_border_style=use_border_style, use_cut_annotations=use_cut_annotations)
     cells = []
     annotations = []
     for r in sheet:
@@ -171,7 +173,7 @@ def sheet_from_file(filein, sheetnr, sheet_counter, use_border_style=False, use_
             annotation = extract_cell_annotation(i, j, cell.comment.text if cell.comment else '')  # Not cuts - that is already used when extracting indices
             annotations.extend(annotation)
             cells.append(Cell(cell.value, i, j, cell.column, cell.row, extract_types(cell, i, j), formula))
-    return Sheet(index_map, cells, annotations)
+    return Sheet(index_map, cells, annotations, cut_annotations)
 
 
 def extract_types(cell, i, j):
@@ -209,10 +211,11 @@ class Cell:
 
 
 class Sheet:
-    def __init__(self, index_map, cells, annotations):
+    def __init__(self, index_map, cells, annotations, cut_annotations):
         self.cells = cells
         self.index_map = index_map
         self.annotations = annotations
+        self.cut_annotations = cut_annotations
         self._cell_map_original = {(c.original_i, c.original_j): c for c in cells}
         self._cell_map = {(c.i, c.j): c for c in cells}
         arg_from = self._arg_from(self._cell_map)

@@ -169,21 +169,23 @@ def extract(
         blocks = [block for blocks in generalised_sheet_blocks for block in blocks]
         output_blocks, prolog_file_name = create_blocks(blocks, match_tuples)
         ProjectedBlock = collections.namedtuple('ProjectedBlock', 'x1 y1 x2 y2 width height')
-        pblocks = list(set(ProjectedBlock(block.x1, block.y1, block.x2, block.y2, block.width, block.height) for block in blocks))
+        pblocks = list(set(ProjectedBlock(block.x1, block.y1, block.x2, block.y2, block.width, block.height) for block in output_blocks))
         assignment, used_constraints = csp(pblocks, sheets, match_tuples, goal=goal, time_limit=csp_time_limit, optimisation_level=csp_optimisation_level)
-        wb, df = fill_blocks(blocks, output_blocks, assignment)
+        if assignment:
+            wb, df = fill_blocks(blocks, output_blocks, assignment)
+            pandas.options.display.width = 0
+            print(df)
         integration_report = IntegrationReport(
-            num_sheet_blocks=(len(sb) for sb in sheet_blocks),
-            num_sheet_formula_blocks=(len([b for b in sb if b.type == 'formula']) for sb in sheet_blocks),
-            num_generalised_formula_blocks=(len([b for b in sb if isinstance(b, FormulaBlock)]) for sb in generalised_sheet_blocks),
+            num_sheet_blocks=[len(sb) for sb in sheet_blocks],
+            num_sheet_formula_blocks=[len([b for b in sb if b.type == 'formula']) for sb in sheet_blocks],
+            num_generalised_formula_blocks=[len([b for b in sb if isinstance(b, FormulaBlock)]) for sb in generalised_sheet_blocks],
             num_output_blocks=len(output_blocks),
-            num_used_blocks=len(b for b, used in used_constraints['blocks'].items() if used),
-            num_used_positional_constraints=sum(len(w for w, used in used_constraints[positional].items() if used) for positional in ['left', 'above', 'left_equal', 'above_equal']),
-            num_total_positional_constraints=sum(len(w for w, used in used_constraints[positional].items()) for positional in ['left', 'above', 'left_equal', 'above_equal'])
+            num_used_blocks=len([b for b, used in used_constraints['blocks'].items() if used]),
+            num_used_positional_constraints=sum(len([w for w, used in used_constraints[positional].items() if used]) for positional in ['left', 'above', 'left_equal', 'above_equal']),
+            num_total_positional_constraints=sum(len([w for w, used in used_constraints[positional].items()]) for positional in ['left', 'above', 'left_equal', 'above_equal'])
         )
+        save_report(integration_report, fileout + '/report.json')
         print('done')
-        pandas.options.display.width = 0
-        print(df)
     except Exception as error:
         print('Error')
         print(error)
@@ -191,7 +193,6 @@ def extract(
     finally:
         #print(df)
         if fileout:
-            save_report(integration_report, fileout + '/report.json')
             for i, blocks in enumerate(sheet_blocks):
                 draw_blocks(blocks, fileout + f'/{i}.svg')
     if fileout:
